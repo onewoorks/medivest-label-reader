@@ -218,13 +218,6 @@ export default {
                 if (code_len.length == 2) {
                     this.findAssetActivity()
                 }
-                // Axios.get(
-                //     process.env.VUE_APP_API + `/asset/qr_code/${read}`
-                // ).then(response => {
-                //     var data = response.data[0]
-                //     this.customer = data
-                //     this.$refs.ticketModal.click()
-                // })
             }
         },
         async onInit(promise) {
