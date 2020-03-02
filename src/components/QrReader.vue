@@ -6,10 +6,13 @@
         @fullscreenchange="onFullscreenChange"
     >
         <div class="qrreader">
-          <center>
-<img src="img/logo.png" alt="nsummit logo" style="height:50px" />
-          </center>
-            
+            <center>
+                <img
+                    src="img/logo.png"
+                    alt="nsummit logo"
+                    style="height:50px"
+                />
+            </center>
         </div>
         <qrcode-stream @decode="onDecode" @init="onInit" />
         <a
@@ -31,32 +34,55 @@
         >
             <div class="modal-dialog modal-dialog-centered" role="document">
                 <div class="modal-content">
-                    <div class="modal-body p-4" id="result">
+                    <div class="modal-body p-2 text-left" id="result">
                         <div v-if="Object.keys(customer).length > 2">
-                            <div>
-                              {{ customer.asset_info.model }}
-                            </div>
-                            <div>
-                              {{ customer.asset_info.asset_no }}
-                            </div>
-                            <div>
-                              {{ customer.asset_info.serial_no }}
-                            </div>
-                            <div>
-                              {{ customer.asset_info.location_name }}
-                            </div>
-
-                            <hr />
-                            <div
-                                v-for="(activity, index) in customer.payloads
-                                    .activity"
-                                :key="index"
+                            <table
+                                class="table table-bordered"
+                                style="font-size:0.9em"
                             >
-                                <div v-if="activity.qr_code === read_qr">
-                                    
+                                <tbody>
+                                    <tr>
+                                        <th scoped="" style="width:90px">QR</th>
+                                        <td>{{ read_qr }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="">Asset Name</th>
+                                        <td>{{ customer.asset_info.model }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="">Asset No</th>
+                                        <td>
+                                            {{ customer.asset_info.asset_no }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="">Serial No</th>
+                                        <td>
+                                            {{ customer.asset_info.serial_no }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="">Location</th>
+                                        <td>
+                                            {{
+                                                customer.asset_info
+                                                    .location_name
+                                            }}
+                                        </td>
+                                    </tr>
+                                    <tr
+                                        v-for="(activity, index) in customer
+                                            .payloads.activity"
+                                        :key="index"
+                                        v-show="activity.qr_code === read_qr"
+                                    >
+                                        <th scope="">Activity</th>
+                                        <td>
                                     {{ activity.name }}
-                                </div>
-                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -147,40 +173,58 @@ export default {
             promise.catch(console.error)
         },
         onDecode(result) {
-                this.reader = result
-                this.getResult(result)
+            this.reader = result
+            this.getResult(result)
         },
         onClose() {
             this.forceRerender()
         },
         onConfirm() {
-            // var customer_data = this.customer;
-            // var post_data = {
-            //   customer_name: customer_data.name,
-            //   customer_phone_no: customer_data.phone_number,
-            //   email: customer_data.email,
-            //   register_date: customer_data.register_date,
-            //   reader_counter: this.reader_counter,
-            //   sitting_zone: customer_data.sitting_zone,
-            //   id_number: customer_data.id_number.toString(),
-            //   qr_code: customer_data.qr_code.toString()
-            // };
-            // Axios.post(process.env.VUE_APP_API + "/attendence/attend", post_data);
             this.forceRerender()
         },
         forceRerender() {
             this.componentKey += 1
         },
+        findAsset() {
+            Axios.get(`${process.env.VUE_APP_URL}/data/asset_activity.json`).then(
+                response => {
+                    let asset = response.data.find(
+                        k => k.payloads.qr_code === this.read_qr
+                    )
+                    this.customer = asset
+                    this.$refs.ticketModal.click()
+                }
+            )
+        },
+        findAssetActivity() {
+            Axios.get(`${process.env.VUE_APP_URL}/data/asset_activity.json`).then(
+                response => {
+                    let asset_code = this.read_qr.split('_')
+                    let asset = response.data.find(
+                        k => k.payloads.qr_code === asset_code[0]
+                    )
+                    this.customer = asset
+                    this.$refs.ticketModal.click()
+                }
+            )
+        },
         getResult(read) {
             if (read != '') {
                 this.read_qr = read
-                Axios.get(
-                    process.env.VUE_APP_API + `/asset/qr_code/${read}`
-                ).then(response => {
-                    var data = response.data[0]
-                    this.customer = data
-                    this.$refs.ticketModal.click()
-                })
+                let code_len = this.read_qr.split('_')
+                if (code_len.length == 1) {
+                    this.findAsset()
+                }
+                if (code_len.length == 2) {
+                    this.findAssetActivity()
+                }
+                // Axios.get(
+                //     process.env.VUE_APP_API + `/asset/qr_code/${read}`
+                // ).then(response => {
+                //     var data = response.data[0]
+                //     this.customer = data
+                //     this.$refs.ticketModal.click()
+                // })
             }
         },
         async onInit(promise) {
